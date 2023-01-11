@@ -21,6 +21,20 @@ public class MpesaConfiguration {
     private String consumerKey;
     @Value("${mpesa.consumerSecret}")
     private String consumerSecret;
+    @Value("${mpesa.url}")
+    private String mpesaBaseUrl;
+    @Value("${mpesa.stkPushUrl}")
+    private String stkPushUrl;
+    @Value("${mpesa.stkPassKey}")
+    private String stkPassKey;
+    @Value("${mpesa.stkPushShortcode}")
+    private String stkPushShortcode;
+    @Value("${mpesa.stkPushCallBackUrl}")
+    private String stkPushRequestCallbackUrl;
+
+
+
+
     @Bean
     RestTemplate restTemplate(){
         return new RestTemplate();

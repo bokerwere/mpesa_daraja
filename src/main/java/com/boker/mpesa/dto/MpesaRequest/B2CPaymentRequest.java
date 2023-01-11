@@ -1,38 +1,44 @@
 package com.boker.mpesa.dto.MpesaRequest;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-public class B2CPaymentRequest{
+@Setter
+@Getter
 
-	@JsonProperty("QueueTimeOutURL")
-	private String queueTimeOutURL;
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class B2CPaymentRequest {
 
-	@JsonProperty("Remarks")
-	private String remarks;
+    @JsonProperty("QueueTimeOutURL")
+    private String queueTimeOutURL;
 
-	@JsonProperty("Occasion")
-	private String occasion;
+    @JsonProperty("Remarks")
+    private String remarks;
 
-	@JsonProperty("Amount")
-	private String amount;
+    @JsonProperty("Occassion")
+    private String occassion;
 
-	@JsonProperty("InitiatorName")
-	private String initiatorName;
+    @JsonProperty("Amount")
+    private String amount;
 
-	@JsonProperty("SecurityCredential")
-	private String securityCredential;
+    @JsonProperty("InitiatorName")
 
-	@JsonProperty("CommandID")
-	private String commandID;
+    private String initiatorName;
 
-	@JsonProperty("PartyA")
-	private String partyA;
+    @JsonProperty("SecurityCredential")
+    private String securityCredential;
 
-	@JsonProperty("PartyB")
-	private String partyB;
+    @JsonProperty("CommandID")
+    private String commandID;
 
-	@JsonProperty("ResultURL")
-	private String resultURL;
+    @JsonProperty("PartyA")
+    private String partyA;
+
+    @JsonProperty("PartyB")
+    private String partyB;
+
+    @JsonProperty("ResultURL")
+    private String resultURL;
 }
