@@ -6,6 +6,7 @@ import com.boker.mpesa.Utils.HelperUtility;
 import com.boker.mpesa.dto.MpesaRequest.*;
 import com.boker.mpesa.dto.MpesaResponse.AccessTokenResponse;
 import com.boker.mpesa.dto.MpesaResponse.C2BSimulateResponseDto;
+import com.boker.mpesa.dto.MpesaResponse.StkPushSyncResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,10 +15,15 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import javax.annotation.PostConstruct;
+import java.util.Optional;
 
 
 @Service
@@ -51,6 +57,7 @@ public class MpesaServiceImpl implements MpesaService {
 
             }
         } catch (Exception e) {
+            log.error("[");
             e.getMessage();
         }
 
@@ -58,23 +65,22 @@ public class MpesaServiceImpl implements MpesaService {
     }
 
     @Override
-    public AccessTokenResponse generateToken() {
+    public void generateToken() {
         String encodedCedentials = HelperUtility.toBase64(String.format("%s:%s", mpesaConfiguration.getConsumerKey(), mpesaConfiguration.getConsumerSecret()));
-        String encoded = "R3NaNjV1VGhHNVBOQldUSmdKTXJkUzRBVFRYb0ZleTg6QzBMeVdJT2hBa3ZHdkh2Tw==";
-        String value = "Basic R3NaNjV1VGhHNVBOQldUSmdKTXJkUzRBVFRYb0ZleTg6QzBMeVdJT2hBa3ZHdkh2Tw==";
         HttpHeaders httpHeaders = new HttpHeaders();
         //httpHeaders.setBasicAuth(encodedCedentials);
-        httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        httpHeaders.set("Authorization", value);
-        System.out.println("===============" + encodedCedentials);
-        System.out.println(encoded);
+        httpHeaders.setBasicAuth("Bearer"+"R3NaNjV1VGhHNVBOQldUSmdKTXJkUzRBVFRYb0ZleTg6QzBMeVdJT2hBa3ZHdkh2Tw==");
+        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+
+//        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+//        map.add("grant_type","client_credentials");
         HttpEntity httpEntity = new HttpEntity<>(httpHeaders);
         String url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials";
         UriComponents bulder = UriComponentsBuilder.fromUriString(url).build();
         ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.GET, httpEntity, JsonNode.class);
         System.out.println(response.getStatusCodeValue());
-        System.out.println(response.getBody());
-        return null;
+        System.out.println("==========" + response.getBody());
+
     }
 
     @Override
@@ -164,7 +170,6 @@ public class MpesaServiceImpl implements MpesaService {
         String url = "https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest";
         UriComponents urlBuilder = UriComponentsBuilder.fromHttpUrl(url).build();
         ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.POST, entity, JsonNode.class);
-        System.out.println("rep=============" + response);
         int statusCode = response.getStatusCodeValue();
         log.info("statusCode:{}", statusCode);
         JsonNode jsonNode = response.getBody();
@@ -173,44 +178,58 @@ public class MpesaServiceImpl implements MpesaService {
 
     @SneakyThrows
     @Override
-    public JsonNode StkPushTransaction(InternalStkPushRequest internalStkPushRequest) {
-        AccessTokenResponse token = getToken();
-        ExternalStkPushRequest externalStkPushRequest = new ExternalStkPushRequest();
-        String transactionTimestamp = HelperUtility.generateTimestamp();
-        String stkPushPassword = HelperUtility.getStkPushPassword(mpesaConfiguration.getStkPushShortcode(), mpesaConfiguration.getStkPassKey(), transactionTimestamp);
+    public Optional<StkPushSyncResponse> StkPushTransaction(InternalStkPushRequest internalStkPushRequest) {
+        try {
+            AccessTokenResponse token = getToken();
+            ExternalStkPushRequest externalStkPushRequest = new ExternalStkPushRequest();
+            String transactionTimestamp = HelperUtility.generateTimestamp();
+            String stkPushPassword = HelperUtility.getStkPushPassword(mpesaConfiguration.getStkPushShortcode(), mpesaConfiguration.getStkPassKey(), transactionTimestamp);
 
-        externalStkPushRequest.setBusinessShortCode(mpesaConfiguration.getStkPushShortcode());
-        externalStkPushRequest.setPassword(stkPushPassword);
-        externalStkPushRequest.setTimestamp(transactionTimestamp);
-        externalStkPushRequest.setAmount(internalStkPushRequest.getAmount());
-        externalStkPushRequest.setCallBackURL(mpesaConfiguration.getStkPushRequestCallbackUrl());
-        externalStkPushRequest.setTransactionType(Constants.CUSTOMER_PAYBILL_ONLINE);
-        externalStkPushRequest.setPartyB(mpesaConfiguration.getStkPushShortcode());
-        externalStkPushRequest.setPartyA(internalStkPushRequest.getPhoneNumber());
-        externalStkPushRequest.setPhoneNumber(internalStkPushRequest.getPhoneNumber());
-        externalStkPushRequest.setAccountReference(HelperUtility.getTransactionUniqueNumber());
-        externalStkPushRequest.setTransactionDesc(String.format("%s Transaction", internalStkPushRequest.getPhoneNumber()));
-        log.info("payload{}", mapper.writeValueAsString(externalStkPushRequest));
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(token.getAccessToken());
-        HttpEntity<ExternalStkPushRequest> entity = new HttpEntity<>(externalStkPushRequest, headers);
+            externalStkPushRequest.setBusinessShortCode(mpesaConfiguration.getStkPushShortcode());
+            externalStkPushRequest.setPassword(stkPushPassword);
+            externalStkPushRequest.setTimestamp(transactionTimestamp);
+            externalStkPushRequest.setAmount(internalStkPushRequest.getAmount());
+            externalStkPushRequest.setCallBackURL(mpesaConfiguration.getStkPushRequestCallbackUrl());
+            externalStkPushRequest.setTransactionType(Constants.CUSTOMER_PAYBILL_ONLINE);
+            externalStkPushRequest.setPartyB(mpesaConfiguration.getStkPushShortcode());
+            externalStkPushRequest.setPartyA(internalStkPushRequest.getPhoneNumber());
+            externalStkPushRequest.setPhoneNumber(internalStkPushRequest.getPhoneNumber());
+            externalStkPushRequest.setAccountReference(HelperUtility.getTransactionUniqueNumber());
+            externalStkPushRequest.setTransactionDesc(String.format("%s Transaction", internalStkPushRequest.getPhoneNumber()));
+            log.info("payload{}", mapper.writeValueAsString(externalStkPushRequest));
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(token.getAccessToken());
+            HttpEntity<ExternalStkPushRequest> entity = new HttpEntity<>(externalStkPushRequest, headers);
 
-        String stkPushRequestUrl = mpesaConfiguration.getStkPushUrl();
-        ResponseEntity<JsonNode> response = restTemplate.exchange(stkPushRequestUrl, HttpMethod.POST, entity, JsonNode.class);
-        int statusCodeValue = response.getStatusCodeValue();
-        HttpStatus httpStatus = response.getStatusCode();
-        log.info("httpStatus:{}", httpStatus);
-        log.info("statusValueCode:{}", statusCodeValue);
+            String stkPushRequestUrl = mpesaConfiguration.getStkPushUrl();
+            try {
+                ResponseEntity<JsonNode> response = restTemplate.exchange(stkPushRequestUrl, HttpMethod.POST, entity, JsonNode.class);
+                int statusCodeValue = response.getStatusCodeValue();
+                HttpStatus httpStatus = response.getStatusCode();
+                log.info("httpStatus:{}", httpStatus);
+                log.info("statusValueCode:{}", statusCodeValue);
+                if (statusCodeValue == 200 || statusCodeValue == 201 || statusCodeValue == 202) {
+                    JsonNode jsonNode = response.getBody();
+                    log.info("responseBody{}", mapper.writeValueAsString(jsonNode));
+                    StkPushSyncResponse stkPushSyncResponse = mapper.treeToValue(jsonNode, StkPushSyncResponse.class);
+                    log.info("stkPushSycResponse{}", mapper.writeValueAsString(stkPushSyncResponse));
+                    String merchantId = jsonNode.get("MerchantRequestID").asText();
+                    log.info("merchantId{}", merchantId);
+                    return Optional.of(stkPushSyncResponse);
+                }
 
-        JsonNode jsonNode = response.getBody();
-        log.info("responseBody{}", mapper.writeValueAsString(jsonNode));
-        String merchantId = jsonNode.get("MerchantRequestID").asText();
-
-        System.out.println("mech========" + merchantId);
-
-
-        return jsonNode;
+            } catch (RestClientResponseException e) {
+                e.getMessage();
+                log.error("error{}", e.getMessage());
+                log.error("errorBody{}", mapper.writeValueAsString(e.getResponseBodyAsString()));
+                e.getRawStatusCode();
+            }
+        } catch (Exception e) {
+            e.getMessage();
+            e.printStackTrace();
+        }
+        return Optional.empty();
     }
 }
 

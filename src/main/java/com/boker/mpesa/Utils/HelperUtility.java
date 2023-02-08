@@ -24,7 +24,7 @@ public class HelperUtility {
     public static String getTransactionUniqueNumber() {
         RandomStringGenerator stringGenerator = new RandomStringGenerator.Builder()
                 .withinRange('0', 'z')
-                .filteredBy(CharacterPredicates.LETTERS, CharacterPredicates.LETTERS).build();
+                .filteredBy(CharacterPredicates.LETTERS, CharacterPredicates.DIGITS).build();
         String transactionNumber = stringGenerator.generate(12).toUpperCase();
         log.info("Transaction Number:{}", transactionNumber);
         return transactionNumber;

@@ -1,11 +1,6 @@
 package com.boker.mpesa.Application;
 
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.client.RestClientResponseException;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @RestControllerAdvice
 
